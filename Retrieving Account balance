@@ -1,0 +1,45 @@
+#Retrieving Account balance and Bitcoin Price:
+
+import os
+import csv
+from binance.client import Client
+
+# Initialize API key and secret
+api_key = os.environ.get('binance_api')
+api_secret = os.environ.get('binance_secret')
+
+# Initialize Binance client
+client = Client(api_key, api_secret)
+
+# Get account balances for all assets
+print("All Account Balances:")
+print(client.get_account())
+
+# Get balance for a specific asset (BTC)
+print("\nBTC Balance:")
+print(client.get_asset_balance(asset='BTC'))
+
+# Get balances for futures account
+print("\nFutures Account Balances:")
+print(client.futures_account_balance())
+
+# Get balances for margin account
+print("\nMargin Account Balances:")
+print(client.get_margin_account())
+
+# Get latest price for Bitcoin
+btc_price = client.get_symbol_ticker(symbol="BTCUSDT")
+print("\nLatest Bitcoin Price:")
+print(btc_price["price"])
+
+# Get timestamp of earliest available data
+timestamp = client._get_earliest_valid_timestamp('BTCUSDT', '1d')
+
+# Request historical candle data
+bars = client.get_historical_klines('BTCUSDT', '1d', timestamp, limit=1000)
+
+# Save as CSV file using the CSV writer library
+with open('btc_bars.csv', 'w', newline='') as f:
+    wr = csv.writer(f)
+    for line in bars:
+        wr.writerow(line)
