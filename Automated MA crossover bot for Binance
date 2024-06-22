@@ -1,0 +1,76 @@
+import os
+import time
+from binance.client import Client
+from binance.enums import *
+
+# Load your Binance API key and secret
+api_key = os.getenv('BINANCE_API_KEY')
+api_secret = os.getenv('BINANCE_API_SECRET')
+
+client = Client(api_key, api_secret)
+
+# Define the trading strategy
+def simple_moving_average_strategy(symbol, short_window, long_window):
+    # Get historical klines from Binance
+    klines = client.get_historical_klines(symbol, Client.KLINE_INTERVAL_1MINUTE, "1 day ago UTC")
+
+    # Close prices for the symbol
+    closes = [float(kline[4]) for kline in klines]
+
+    # Ensure there are enough data points
+    if len(closes) < long_window:
+        raise ValueError("Not enough data to calculate moving averages")
+
+    # Calculate moving averages
+    short_moving_avg = sum(closes[-short_window:]) / short_window
+    long_moving_avg = sum(closes[-long_window:]) / long_window
+
+    # Define the buy/sell signals
+    if short_moving_avg > long_moving_avg:
+        return 'BUY'
+    else:
+        return 'SELL'
+
+# Execute the trading strategy
+def execute_trade(symbol, order_type, quantity):
+    try:
+        if order_type == 'BUY':
+            order = client.order_market_buy(
+                symbol=symbol,
+                quantity=quantity
+            )
+        elif order_type == 'SELL':
+            order = client.order_market_sell(
+                symbol=symbol,
+                quantity=quantity
+            )
+        print(f"Order placed: {order}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+# Main function to run the bot
+def main():
+    symbol = 'BTCUSDT'
+    quantity = 0.001  # Example quantity, adjust based on your needs
+    short_window = 50
+    long_window = 200
+
+    while True:
+        try:
+            # Get the strategy signal
+            signal = simple_moving_average_strategy(symbol, short_window, long_window)
+            
+            # Execute the trade based on the signal
+            execute_trade(symbol, signal, quantity)
+            
+            # Print the signal and time
+            print(f"Signal: {signal}, Time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            # Wait for a minute before checking again
+            time.sleep(60)
+        except Exception as e:
+            print(f"An error occurred in the main loop: {e}")
+            time.sleep(60)
+
+if __name__ == "__main__":
+    main()
